@@ -10,7 +10,7 @@
  * GNU General Public License for more details.
  */
 
-#define pr_fmt(fmt) "QCOM-BATT: %s: " fmt, __func__
+#define pr_fmt(fmt) "lct QCOM-BATT: %s: " fmt, __func__
 
 #include <linux/device.h>
 #include <linux/delay.h>
@@ -88,7 +88,7 @@ enum print_reason {
 	PR_PARALLEL	= BIT(0),
 };
 
-static int debug_mask;
+static int debug_mask = 0xff;//lct open
 module_param_named(debug_mask, debug_mask, int, S_IRUSR | S_IWUSR);
 
 #define pl_dbg(chip, reason, fmt, ...)				\
@@ -137,7 +137,11 @@ static void split_settled(struct pl_data *chip)
 		}
 		main_settled_ua = pval.intval;
 		/* slave gets 10 percent points less for ICL */
+#if defined(CONFIG_KERNEL_CUSTOM_E7S)
+		slave_icl_pct = max(0, chip->slave_pct);
+#else
 		slave_icl_pct = max(0, chip->slave_pct - 10);
+#endif
 		slave_ua = ((main_settled_ua + chip->pl_settled_ua)
 						* slave_icl_pct) / 100;
 		total_settled_ua = main_settled_ua + chip->pl_settled_ua;
@@ -444,6 +448,11 @@ static void get_fcc_split(struct pl_data *chip, int total_ua,
 			(s64)get_effective_result(chip->fv_votable) * 100);
 	}
 
+#if defined(CONFIG_KERNEL_CUSTOM_E7S)	
+	bcl_ua = INT_MAX;
+	chip->slave_pct = 50;
+#endif
+
 	effective_total_ua = max(0, total_ua + hw_cc_delta_ua);
 	slave_limited_ua = min(effective_total_ua, bcl_ua);
 	*slave_ua = (slave_limited_ua * chip->slave_pct) / 100;
@@ -546,7 +555,7 @@ static int pl_fcc_vote_callback(struct votable *votable, void *data,
 		if (chip->pl_mode == POWER_SUPPLY_PL_USBIN_USBIN) {
 			pr_err("pl_disable_votable effective total_fcc_ua =%d \n", total_fcc_ua);
 			if (pval.intval > ONLY_PM660_CURRENT_UA) {
-		pval.intval = ONLY_PM660_CURRENT_UA;
+		pval.intval = ONLY_PM660_CURRENT_UA;//2000000 want,now 2500 000
 		pr_err("pl_disable_votable effective total_fcc_ua =%d froce to %d \n", total_fcc_ua, pval.intval);
 			}
 		}
@@ -613,6 +622,14 @@ static int pl_fcc_vote_callback(struct votable *votable, void *data,
 
 				chip->slave_fcc_ua = slave_fcc_ua;
 
+			#if defined(CONFIG_KERNEL_CUSTOM_E7S)
+			if (chip->pl_mode == POWER_SUPPLY_PL_USBMID_USBMID) {
+				if (chip->slave_fcc_ua == 200000) {
+					master_fcc_ua = 400000;//when battery temperature low than 5C, want current 400mA
+					pr_err("lct smb1355 master_fcc_ua froce to %d \n", master_fcc_ua);	
+				}
+			}
+			#endif
 				pval.intval = master_fcc_ua;
 				rc = power_supply_set_property(chip->main_psy,
 				POWER_SUPPLY_PROP_CONSTANT_CHARGE_CURRENT_MAX,
