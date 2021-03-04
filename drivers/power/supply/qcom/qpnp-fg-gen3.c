@@ -1090,12 +1090,13 @@ static int fg_get_batt_profile(struct fg_chip *chip)
 		return -ENODATA;
 	}
 
+	//begin for the total capacity of batt in  2017.10.18
 	rc = of_property_read_u32(profile_node, "qcom,battery-full-design", &chip->battery_full_design);
 	if (rc < 0) {
 		pr_err("No profile data available\n");
 		return -ENODATA;
 	}
-
+	//end for the total capacity of batt in  2017.10.18
 
 	if (len != PROFILE_LEN) {
 		pr_err("battery profile incorrect size: %d\n", len);

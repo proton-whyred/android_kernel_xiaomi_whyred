@@ -337,10 +337,10 @@ static int smb2_parse_dt(struct smb2 *chip)
 		if (of_find_property(node, "qcom,thermal-mitigation-china", &byte_len)) {
 			chg->thermal_mitigation = devm_kzalloc(chg->dev, byte_len,
 				GFP_KERNEL);
-		
+
 			if (chg->thermal_mitigation == NULL)
 				return -ENOMEM;
-		
+
 			chg->thermal_levels = byte_len / sizeof(u32);
 				rc = of_property_read_u32_array(node,
 						"qcom,thermal-mitigation-china",
@@ -1144,13 +1144,9 @@ static int smb2_batt_get_prop(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_CHARGE_FULL:
 	case POWER_SUPPLY_PROP_CYCLE_COUNT:
 	case POWER_SUPPLY_PROP_VOLTAGE_NOW:
+	case POWER_SUPPLY_PROP_CURRENT_NOW:
 	case POWER_SUPPLY_PROP_TEMP:
 		rc = smblib_get_prop_from_bms(chg, psp, val);
-		break;
-	case POWER_SUPPLY_PROP_CURRENT_NOW:
-		rc = smblib_get_prop_from_bms(chg, psp, val);
-		if (!rc)
-			val->intval *= (-1);
 		break;
 	case POWER_SUPPLY_PROP_FCC_STEPPER_ENABLE:
 		val->intval = chg->fcc_stepper_mode;
@@ -1874,7 +1870,7 @@ static int smb2_init_hw(struct smb2 *chip)
 		return rc;
 	}
 
-	rc = vote(chg->chg_disable_votable, DEFAULT_VOTER, true, 0);
+	rc = vote(chg->chg_disable_votable, DEFAULT_VOTER, true, 0);   //add for 99% don't charge when power off in 2018.03.01
 
 	switch (chip->dt.chg_inhibit_thr_mv) {
 	case 50:
@@ -1904,7 +1900,7 @@ static int smb2_init_hw(struct smb2 *chip)
 		break;
 	}
 
-	rc = vote(chg->chg_disable_votable, DEFAULT_VOTER, false, 0);
+	rc = vote(chg->chg_disable_votable, DEFAULT_VOTER, false, 0);    //add for 99% don't charge when power off in 2018.03.01
 
 	if (rc < 0) {
 		dev_err(chg->dev, "Couldn't configure charge inhibit threshold rc=%d\n",
@@ -2442,21 +2438,21 @@ static void thermal_fb_notifier_resume_work(struct work_struct *work)
 	{
 		if (hwc_check_india == 1) {				
 			if (lct_therm_lvl_reserved.intval >= 2)
-				smblib_set_prop_system_temp_level(chg,&lct_therm_india_level);
+				smblib_set_prop_system_temp_level(chg,&lct_therm_india_level);//level 2, 2000mA
 			else
-				smblib_set_prop_system_temp_level(chg,&lct_therm_lvl_reserved);
+				smblib_set_prop_system_temp_level(chg,&lct_therm_lvl_reserved);//from thermal-level
 		}
 		else {
 			if (lct_therm_lvl_reserved.intval >= 1)
-				smblib_set_prop_system_temp_level(chg,&lct_therm_globe_level);
+				smblib_set_prop_system_temp_level(chg,&lct_therm_globe_level);//level 1, 2300mA
 			else
-				smblib_set_prop_system_temp_level(chg,&lct_therm_lvl_reserved);
+				smblib_set_prop_system_temp_level(chg,&lct_therm_lvl_reserved);//from thermal-level
 		}
 	}
 	else if (LctIsInCall == 1)
-		smblib_set_prop_system_temp_level(chg,&lct_therm_call_level);
+		smblib_set_prop_system_temp_level(chg,&lct_therm_call_level);//level 3
 	else
-		smblib_set_prop_system_temp_level(chg,&lct_therm_lvl_reserved);
+		smblib_set_prop_system_temp_level(chg,&lct_therm_lvl_reserved);//from thermal-levle
 	LctThermal = 0;
 #else
 	if((lct_backlight_off) && (LctIsInCall == 0) && (hwc_check_india == 0))
