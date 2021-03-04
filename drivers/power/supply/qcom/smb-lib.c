@@ -1918,6 +1918,7 @@ int smblib_get_prop_from_bms(struct smb_charger *chg,
 }
 
 
+//begin for the total capacity of batt in  2017.10.18
 int smblib_get_prop_battery_full_design(struct smb_charger *chg,
 				     union power_supply_propval *val)
 {
@@ -1932,7 +1933,7 @@ int smblib_get_prop_battery_full_design(struct smb_charger *chg,
 		val->intval = 4000;
 	return 0;
 }
-
+//end for the total capacity of batt in  2017.10.18
 
 /***********************
  * BATTERY PSY SETTERS *
@@ -3518,7 +3519,9 @@ static void smblib_micro_usb_plugin(struct smb_charger *chg, bool vbus_rising)
 	if (vbus_rising) {
 		/* use the typec flag even though its not typec */
 		chg->typec_present = 1;
+		smblib_err(chg, "lct micro usb plugin\n");
 	} else {
+		smblib_err(chg, "lct micro usb plugout\n");
 		chg->typec_present = 0;
 		smblib_update_usb_type(chg);
 		extcon_set_cable_state_(chg->extcon, EXTCON_USB, false);
